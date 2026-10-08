@@ -1,0 +1,42 @@
+name: Build Treehouse APK
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: treehouse-debug-build
+  cancel-in-progress: false
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Restore development signing key
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: treehouse-dev-debug-key-v1
+      - name: Extract Android project
+        run: unzip -q TreehouseConnect-DEV-Android-Project.zip
+      - name: Build installable APK
+        working-directory: TreehouseConnect
+        run: gradle :app:assembleDebug --no-daemon --stacktrace
+      - name: Name APK
+        run: cp TreehouseConnect/app/build/outputs/apk/debug/app-debug.apk Treehouse-Connect-DEV.apk
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Treehouse-Connect-DEV-APK
+          path: Treehouse-Connect-DEV.apk
+          if-no-files-found: error
+          retention-days: 30
